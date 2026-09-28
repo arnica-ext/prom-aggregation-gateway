@@ -77,18 +77,18 @@ Any flags you see above can also be set by `ENV_VARIABLES`. ENV_VARS must have a
 
 Container images are published here:
 
-https://ghcr.io/zapier/prom-aggregation-gateway
+https://ghcr.io/arnica-ext/prom-aggregation-gateway
 
 ## Helm Chart
 
 Helm Charts are published here:
 
-https://zapier.github.io/prom-aggregation-gateway/
+https://arnica-ext.github.io/prom-aggregation-gateway/
 
 You can use them:
 
 ```
-helm repo add pag https://zapier.github.io/prom-aggregation-gateway/
+helm repo add pag https://arnica-ext.github.io/prom-aggregation-gateway/
 helm repo update
 helm search repo pag -l
 ```
@@ -180,7 +180,7 @@ Prom-aggregation-gateway presents a similar API but does not attempt to be a dro
 
 If you have any questions about, feedback for or problems with `prom-aggregation-gateway`:
 
-- [File an issue](https://github.com/zapier/prom-aggregation-gateway/issues/new).
+- [File an issue](https://github.com/arnica-ext/prom-aggregation-gateway/issues/new).
 
 prom-aggregation-gateway follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md). Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting a project maintainer.
 

@@ -6,7 +6,7 @@ import (
 	promMetrics "github.com/slok/go-http-metrics/metrics/prometheus"
 	"github.com/slok/go-http-metrics/middleware"
 	mGin "github.com/slok/go-http-metrics/middleware/gin"
-	"github.com/zapier/prom-aggregation-gateway/metrics"
+	"github.com/arnica-ext/prom-aggregation-gateway/metrics"
 )
 
 type ApiRouterConfig struct {

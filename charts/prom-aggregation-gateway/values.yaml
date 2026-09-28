@@ -1,6 +1,6 @@
 controller:
   image:
-    repository: ghcr.io/zapier/prom-aggregation-gateway
+    repository: ghcr.io/arnica-ext/prom-aggregation-gateway
     tag: latest
 
   apiPort: 8080

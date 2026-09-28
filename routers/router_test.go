@@ -14,7 +14,7 @@ import (
 	promMetrics "github.com/slok/go-http-metrics/metrics/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zapier/prom-aggregation-gateway/metrics"
+	"github.com/arnica-ext/prom-aggregation-gateway/metrics"
 )
 
 func setupTestRouter(cfg ApiRouterConfig) *gin.Engine {

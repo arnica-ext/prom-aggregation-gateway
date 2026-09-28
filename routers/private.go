@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/zapier/prom-aggregation-gateway/config"
+	"github.com/arnica-ext/prom-aggregation-gateway/config"
 )
 
 func setupLifecycleRouter(promRegistry *prometheus.Registry) *gin.Engine {

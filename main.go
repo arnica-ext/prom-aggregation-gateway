@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/zapier/prom-aggregation-gateway/cmd"
+	"github.com/arnica-ext/prom-aggregation-gateway/cmd"
 )
 
 func main() {

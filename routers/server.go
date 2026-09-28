@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	promMetrics "github.com/slok/go-http-metrics/metrics/prometheus"
-	"github.com/zapier/prom-aggregation-gateway/metrics"
+	"github.com/arnica-ext/prom-aggregation-gateway/metrics"
 )
 
 func RunServers(cfg ApiRouterConfig, apiListen string, lifecycleListen string) {

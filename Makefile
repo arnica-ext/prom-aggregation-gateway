@@ -1,8 +1,8 @@
 VERSION ?= dev
 COMMIT_SHA ?=
 TOKEN ?=
-IMAGE_NAME ?= ghcr.io/zapier/prom-aggregation-gateway
-PKG_PATH := github.com/zapier/prom-aggregation-gateway
+IMAGE_NAME ?= ghcr.io/arnica-ext/prom-aggregation-gateway
+PKG_PATH := github.com/arnica-ext/prom-aggregation-gateway
 
 .PHONY: test ci-golang ci-helm lint test-golang test-helm build build-image build-image-multiarch build-binaries release-binaries build-helm continuous-deploy
 
@@ -61,8 +61,8 @@ release-binaries: build-binaries
 build-helm:
 	cr --config .github/cr.yaml package charts/*
 	mkdir -p .cr-index
-	git config --global user.email "opensource@zapier.com"
-	git config --global user.name "Open Source at Zapier"
+	git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+	git config --global user.name "github-actions[bot]"
 	git fetch --prune --unshallow || true
 	CR_TOKEN=$(TOKEN) cr --config .github/cr.yaml upload --token $(TOKEN) --skip-existing
 	CR_TOKEN=$(TOKEN) cr --config .github/cr.yaml index --token $(TOKEN) --push

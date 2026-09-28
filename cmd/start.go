@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/zapier/prom-aggregation-gateway/routers"
+	"github.com/arnica-ext/prom-aggregation-gateway/routers"
 )
 
 func init() {

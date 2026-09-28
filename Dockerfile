@@ -2,7 +2,7 @@ FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:1.25.7-alpine AS builder
 
 ARG VERSION=dev
 ARG COMMIT_SHA=""
-ARG PKG_PATH=github.com/zapier/prom-aggregation-gateway
+ARG PKG_PATH=github.com/arnica-ext/prom-aggregation-gateway
 ARG TARGETOS
 ARG TARGETARCH
 
@@ -15,7 +15,7 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
   -o prom-aggregation-gateway \
   .
 
-FROM --platform=${BUILDPLATFORM:-linux/amd64} gcr.io/distroless/static:nonroot
+FROM gcr.io/distroless/static:nonroot
 
 COPY --from=builder /src/prom-aggregation-gateway /prom-aggregation-gateway
 ENV GIN_MODE=release
