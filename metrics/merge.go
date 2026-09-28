@@ -82,15 +82,7 @@ func mergeMetric(ty dto.MetricType, a, b *dto.Metric) *dto.Metric {
 		}
 
 	case dto.MetricType_GAUGE:
-		// No very meaningful way for us to merge gauges.  We'll sum them
-		// and clear out any gauges on scrape, as a best approximation, but
-		// this relies on client pushing with the same interval as we scrape.
-		return &dto.Metric{
-			Label: a.Label,
-			Gauge: &dto.Gauge{
-				Value: float64ptr(*a.Gauge.Value + *b.Gauge.Value),
-			},
-		}
+		return b
 
 	case dto.MetricType_HISTOGRAM:
 		return &dto.Metric{

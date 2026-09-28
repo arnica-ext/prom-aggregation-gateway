@@ -148,8 +148,6 @@ func (a *Aggregate) HandleRender(c *gin.Context) {
 	contentType := expfmt.Negotiate(c.Request.Header)
 	c.Header("Content-Type", string(contentType))
 	a.encodeAllMetrics(c.Writer, contentType)
-
-	// TODO reset gauges
 }
 
 func (a *Aggregate) encodeAllMetrics(writer io.Writer, contentType expfmt.Format) {
