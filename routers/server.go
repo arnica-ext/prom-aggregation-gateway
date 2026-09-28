@@ -5,17 +5,21 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/arnica-ext/prom-aggregation-gateway/metrics"
 	"github.com/gin-gonic/gin"
 	promMetrics "github.com/slok/go-http-metrics/metrics/prometheus"
-	"github.com/arnica-ext/prom-aggregation-gateway/metrics"
 )
 
-func RunServers(cfg ApiRouterConfig, apiListen string, lifecycleListen string) {
+func RunServers(cfg ApiRouterConfig, apiListen string, lifecycleListen string, metricTTL time.Duration) {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, syscall.SIGTERM, syscall.SIGINT)
+	defer signal.Stop(sigChannel)
 
-	agg := metrics.NewAggregate()
+	agg := metrics.NewAggregate(metrics.SetTTLMetricTime(&metricTTL))
+	cleanupTicker := time.NewTicker(min(metricTTL, time.Minute))
+	defer cleanupTicker.Stop()
 
 	promMetricsConfig := promMetrics.Config{
 		Registry: metrics.PromRegistry,
@@ -27,8 +31,14 @@ func RunServers(cfg ApiRouterConfig, apiListen string, lifecycleListen string) {
 	lifecycleRouter := setupLifecycleRouter(metrics.PromRegistry)
 	go runServer("lifecycle", lifecycleRouter, lifecycleListen)
 
-	// Block until an interrupt or term signal is sent
-	<-sigChannel
+	for {
+		select {
+		case <-cleanupTicker.C:
+			agg.RemoveExpiredMetrics()
+		case <-sigChannel:
+			return
+		}
+	}
 }
 
 func runServer(label string, r *gin.Engine, listen string) {

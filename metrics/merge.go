@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"fmt"
+	"time"
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/model"
@@ -127,6 +128,10 @@ func (mf *metricFamily) mergeFamily(b *dto.MetricFamily) error {
 	i, j := 0, 0
 	mf.lock.Lock()
 	defer mf.lock.Unlock()
+	now := time.Now()
+	for _, metric := range b.Metric {
+		mf.lastSeen[metric] = now
+	}
 	for i < len(mf.Metric) && j < len(b.Metric) {
 		if labelsLessThan(mf.Metric[i].Label, b.Metric[j].Label) {
 			newMetric = append(newMetric, mf.Metric[i])
@@ -136,7 +141,10 @@ func (mf *metricFamily) mergeFamily(b *dto.MetricFamily) error {
 			j++
 		} else {
 			merged := mergeMetric(*mf.Type, mf.Metric[i], b.Metric[j])
+			delete(mf.lastSeen, mf.Metric[i])
+			delete(mf.lastSeen, b.Metric[j])
 			if merged != nil {
+				mf.lastSeen[merged] = now
 				newMetric = append(newMetric, merged)
 			}
 			i++

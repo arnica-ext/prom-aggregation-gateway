@@ -1,8 +1,10 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
+	"fmt"
+
 	"github.com/arnica-ext/prom-aggregation-gateway/routers"
+	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -17,13 +19,16 @@ var startCmd = &cobra.Command{
 }
 
 func startFunc(cmd *cobra.Command, args []string) error {
+	if cfg.MetricTTL <= 0 {
+		return fmt.Errorf("metric-ttl must be positive")
+	}
 
 	apiCfg := routers.ApiRouterConfig{
 		CorsDomain: cfg.CorsDomain,
 		Accounts:   cfg.AuthUsers,
 	}
 
-	routers.RunServers(apiCfg, cfg.ApiListen, cfg.LifecycleListen)
+	routers.RunServers(apiCfg, cfg.ApiListen, cfg.LifecycleListen, cfg.MetricTTL)
 
 	return nil
 }

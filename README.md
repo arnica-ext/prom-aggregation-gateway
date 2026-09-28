@@ -67,11 +67,26 @@ Flags:
       --cors string              The 'Access-Control-Allow-Origin' value to be returned. (default "*")
   -h, --help                     help for prom-aggregation-gateway
       --lifecycleListen string   Listen for lifecycle requests (health, metrics) on this host/port (default ":8888")
+      --metric-ttl duration      Expire metrics after this duration without a push (default 30m0s)
 
 Use "prom-aggregation-gateway [command] --help" for more information about a command.
 ```
 
-Any flags you see above can also be set by `ENV_VARIABLES`. ENV_VARS must have a prefix of `PAG_`, for example `PAG_AUTHUSERS=user1=pass1,user2=pass2` will start the service with basic auth. If an ENV_VARIABLE is set than it will be used over a CLI argument passed to the service.
+Any flags you see above can also be set by `ENV_VARIABLES`. ENV_VARS must have a prefix of `PAG_` (except `METRIC_TTL`), for example `PAG_AUTHUSERS=user1=pass1,user2=pass2` will start the service with basic auth. Explicit CLI arguments take precedence over environment variables.
+
+### Metric retention
+
+Each metric series (a metric name and label set) expires **30 minutes after its last push**. Scraping does not refresh its lifetime. Expired series are removed before rendering `/metrics` and by background cleanup at least once per minute, even when there are no requests. Empty metric families and stale per-family/per-job gateway monitoring entries are also removed. A series pushed again after expiry starts with fresh values.
+
+Override the retention period with a positive Go duration using `METRIC_TTL`, for example:
+
+```bash
+METRIC_TTL=1h prom-aggregation-gateway
+```
+
+You can also use `--metric-ttl=1h`. Invalid or non-positive durations prevent startup. For Helm, set `controller.env.METRIC_TTL: "1h"`.
+
+Retention limits stale data; it does not impose a hard limit on the number or size of series pushed within the retention window.
 
 ## Ready-built images
 

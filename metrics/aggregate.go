@@ -15,14 +15,18 @@ import (
 	"github.com/prometheus/common/expfmt"
 )
 
+const DefaultMetricTTL = 30 * time.Minute
+
 type metricFamily struct {
 	*dto.MetricFamily
-	lock sync.RWMutex
+	lock     sync.RWMutex
+	lastSeen map[*dto.Metric]time.Time
 }
 
 type Aggregate struct {
 	familiesLock sync.RWMutex
 	families     map[string]*metricFamily
+	jobsLastSeen map[string]time.Time
 	options      aggregateOptions
 }
 
@@ -30,7 +34,7 @@ type ignoredLabels []string
 
 type aggregateOptions struct {
 	ignoredLabels     ignoredLabels
-	metricTTLDuration *time.Duration
+	metricTTLDuration time.Duration
 }
 
 type aggregateOptionsFunc func(a *Aggregate)
@@ -43,15 +47,19 @@ func AddIgnoredLabels(ignoredLabels ...string) aggregateOptionsFunc {
 
 func SetTTLMetricTime(duration *time.Duration) aggregateOptionsFunc {
 	return func(a *Aggregate) {
-		a.options.metricTTLDuration = duration
+		if duration != nil {
+			a.options.metricTTLDuration = *duration
+		}
 	}
 }
 
 func NewAggregate(opts ...aggregateOptionsFunc) *Aggregate {
 	a := &Aggregate{
-		families: map[string]*metricFamily{},
+		families:     map[string]*metricFamily{},
+		jobsLastSeen: map[string]time.Time{},
 		options: aggregateOptions{
-			ignoredLabels: []string{},
+			ignoredLabels:     []string{},
+			metricTTLDuration: DefaultMetricTTL,
 		},
 	}
 
@@ -85,28 +93,79 @@ func (a *Aggregate) Len() int {
 	return count
 }
 
-// setFamilyOrGetExistingFamily either sets a new family or returns an existing family
-func (a *Aggregate) setFamilyOrGetExistingFamily(familyName string, family *dto.MetricFamily) *metricFamily {
+func (a *Aggregate) saveFamily(familyName string, family *dto.MetricFamily) error {
 	a.familiesLock.Lock()
 	defer a.familiesLock.Unlock()
-	existingFamily, ok := a.families[familyName]
-	if !ok {
-		a.families[familyName] = &metricFamily{MetricFamily: family}
-		return nil
-	}
-	return existingFamily
-}
 
-func (a *Aggregate) saveFamily(familyName string, family *dto.MetricFamily) error {
-	existingFamily := a.setFamilyOrGetExistingFamily(familyName, family)
+	now := time.Now()
+	existingFamily := a.families[familyName]
 	if existingFamily != nil {
-		err := existingFamily.mergeFamily(family)
-		if err != nil {
+		existingFamily.removeExpired(now.Add(-a.options.metricTTLDuration))
+	}
+	if existingFamily == nil || len(existingFamily.Metric) == 0 {
+		existingFamily = &metricFamily{
+			MetricFamily: family,
+			lastSeen:     make(map[*dto.Metric]time.Time, len(family.Metric)),
+		}
+		for _, metric := range family.Metric {
+			existingFamily.lastSeen[metric] = now
+		}
+		a.families[familyName] = existingFamily
+	} else {
+		if err := existingFamily.mergeFamily(family); err != nil {
 			return err
 		}
 	}
 
+	MetricCountByFamily.WithLabelValues(familyName).Set(float64(len(existingFamily.Metric)))
+	TotalFamiliesGauge.Set(float64(len(a.families)))
 	return nil
+}
+
+func (mf *metricFamily) removeExpired(cutoff time.Time) {
+	mf.lock.Lock()
+	defer mf.lock.Unlock()
+
+	retained := mf.Metric[:0]
+	for _, metric := range mf.Metric {
+		if mf.lastSeen[metric].After(cutoff) {
+			retained = append(retained, metric)
+		}
+	}
+	if len(retained) == len(mf.Metric) {
+		return
+	}
+
+	// Rebuild storage so expired series and the old capacity can be collected.
+	mf.Metric = append([]*dto.Metric(nil), retained...)
+	lastSeen := make(map[*dto.Metric]time.Time, len(retained))
+	for _, metric := range retained {
+		lastSeen[metric] = mf.lastSeen[metric]
+	}
+	mf.lastSeen = lastSeen
+}
+
+func (a *Aggregate) RemoveExpiredMetrics() {
+	a.familiesLock.Lock()
+	defer a.familiesLock.Unlock()
+
+	cutoff := time.Now().Add(-a.options.metricTTLDuration)
+	for name, family := range a.families {
+		family.removeExpired(cutoff)
+		if len(family.Metric) == 0 {
+			delete(a.families, name)
+			MetricCountByFamily.DeleteLabelValues(name)
+		} else {
+			MetricCountByFamily.WithLabelValues(name).Set(float64(len(family.Metric)))
+		}
+	}
+	for job, lastSeen := range a.jobsLastSeen {
+		if !lastSeen.After(cutoff) {
+			delete(a.jobsLastSeen, job)
+			MetricPushes.DeleteLabelValues(job)
+		}
+	}
+	TotalFamiliesGauge.Set(float64(len(a.families)))
 }
 
 func (a *Aggregate) parseAndMerge(r io.Reader, labels []labelPair) error {
@@ -134,12 +193,7 @@ func (a *Aggregate) parseAndMerge(r io.Reader, labels []labelPair) error {
 		if err := a.saveFamily(name, family); err != nil {
 			return err
 		}
-
-		MetricCountByFamily.WithLabelValues(name).Set(float64(len(family.Metric)))
-
 	}
-
-	TotalFamiliesGauge.Set(float64(a.Len()))
 
 	return nil
 }
@@ -151,6 +205,7 @@ func (a *Aggregate) HandleRender(c *gin.Context) {
 }
 
 func (a *Aggregate) encodeAllMetrics(writer io.Writer, contentType expfmt.Format) {
+	a.RemoveExpiredMetrics()
 	enc := expfmt.NewEncoder(writer, contentType)
 
 	a.familiesLock.RLock()
@@ -211,7 +266,10 @@ func (a *Aggregate) HandleInsert(c *gin.Context) {
 		return
 	}
 
+	a.familiesLock.Lock()
+	a.jobsLastSeen[jobName] = time.Now()
 	MetricPushes.WithLabelValues(jobName).Inc()
+	a.familiesLock.Unlock()
 	c.Status(http.StatusAccepted)
 }
 

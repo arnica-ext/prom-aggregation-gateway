@@ -3,8 +3,9 @@ package cmd
 import (
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/arnica-ext/prom-aggregation-gateway/config"
+	"github.com/arnica-ext/prom-aggregation-gateway/metrics"
+	"github.com/spf13/cobra"
 )
 
 var cfg = config.Server{}
@@ -26,6 +27,7 @@ func Execute() {
 	rootCmd.PersistentFlags().StringVar(&cfg.ApiListen, "apiListen", ":80", "Listen for API requests on this host/port.")
 	rootCmd.PersistentFlags().StringVar(&cfg.LifecycleListen, "lifecycleListen", ":8888", "Listen for lifecycle requests (health, metrics) on this host/port")
 	rootCmd.PersistentFlags().StringVar(&cfg.CorsDomain, "cors", "*", "The 'Access-Control-Allow-Origin' value to be returned.")
+	rootCmd.PersistentFlags().DurationVar(&cfg.MetricTTL, "metric-ttl", metrics.DefaultMetricTTL, "Expire metrics after this duration without a push (must be positive).")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
