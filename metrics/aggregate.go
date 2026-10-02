@@ -1,11 +1,14 @@
 package metrics
 
 import (
+	"compress/gzip"
 	"errors"
 	"io"
 	"log"
+	"mime"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -201,7 +204,28 @@ func (a *Aggregate) parseAndMerge(r io.Reader, labels []labelPair) error {
 func (a *Aggregate) HandleRender(c *gin.Context) {
 	contentType := expfmt.Negotiate(c.Request.Header)
 	c.Header("Content-Type", string(contentType))
-	a.encodeAllMetrics(c.Writer, contentType)
+	c.Writer.Header().Add("Vary", "Accept-Encoding")
+
+	var writer io.Writer = c.Writer
+	for _, encoding := range strings.Split(strings.Join(c.Request.Header.Values("Accept-Encoding"), ","), ",") {
+		name, params, err := mime.ParseMediaType(encoding)
+		if err != nil || name != "gzip" {
+			continue
+		}
+		if q, ok := params["q"]; ok {
+			quality, err := strconv.ParseFloat(q, 64)
+			if err != nil || !(quality > 0 && quality <= 1) {
+				continue
+			}
+		}
+		c.Header("Content-Encoding", "gzip")
+		gzipWriter := gzip.NewWriter(c.Writer)
+		defer gzipWriter.Close()
+		writer = gzipWriter
+		break
+	}
+
+	a.encodeAllMetrics(writer, contentType)
 }
 
 func (a *Aggregate) encodeAllMetrics(writer io.Writer, contentType expfmt.Format) {
