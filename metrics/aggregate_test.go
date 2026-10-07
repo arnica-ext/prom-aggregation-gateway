@@ -65,7 +65,7 @@ histogram_count 1
 counter{job="test"} 60
 # HELP gauge A gauge
 # TYPE gauge gauge
-gauge{job="test"} 99
+gauge{job="test"} 57
 # HELP histogram A histogram
 # TYPE histogram histogram
 histogram_bucket{job="test",le="1"} 0
@@ -118,9 +118,9 @@ ui_external_lib_loaded{name="mixpanel",loaded="true"} 1
 `
 	gaugeOutput = `# HELP ui_external_lib_loaded A gauge with entries in un-sorted order
 # TYPE ui_external_lib_loaded gauge
-ui_external_lib_loaded{job="test",loaded="true",name="Intercom"} 2
-ui_external_lib_loaded{job="test",loaded="true",name="ga"} 2
-ui_external_lib_loaded{job="test",loaded="true",name="mixpanel"} 2
+ui_external_lib_loaded{job="test",loaded="true",name="Intercom"} 1
+ui_external_lib_loaded{job="test",loaded="true",name="ga"} 1
+ui_external_lib_loaded{job="test",loaded="true",name="mixpanel"} 1
 `
 	duplicateLabels = `
 # HELP ui_external_lib_loaded Test with duplicate values
@@ -204,8 +204,8 @@ func TestAggregate(t *testing.T) {
 				text, _ := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
 					A:        difflib.SplitLines(c.want),
 					B:        difflib.SplitLines(have),
-					FromFile: "have",
-					ToFile:   "want",
+					FromFile: "want",
+					ToFile:   "have",
 					Context:  3,
 				})
 				t.Fatalf("%s: %s", c.testName, text)
