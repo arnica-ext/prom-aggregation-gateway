@@ -1,0 +1,115 @@
+{
+  "uid": "gateway-histogram",
+  "title": "Push Gateway Histogram",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "tags": [
+    "prometheus",
+    "histogram",
+    "aggregation-gateway"
+  ],
+  "timezone": "browser",
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "barchart",
+      "title": "Duration histogram \u2014 selected time range",
+      "description": "Estimated new observations per duration interval during the selected time range. Adjacent cumulative buckets are subtracted. Prometheus increase extrapolates at window boundaries, so counts can be fractional.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 15
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-local"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-local"
+          },
+          "expr": "label_replace(clamp_min(sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"0.1\"}[$__range])), 0), \"bucket\", \"0.00 - 0.10 s\", \"__name__\", \".*\") or label_replace(clamp_min((sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"0.25\"}[$__range])) - sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"0.1\"}[$__range]))), 0), \"bucket\", \"0.10 - 0.25 s\", \"__name__\", \".*\") or label_replace(clamp_min((sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"0.5\"}[$__range])) - sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"0.25\"}[$__range]))), 0), \"bucket\", \"0.25 - 0.50 s\", \"__name__\", \".*\") or label_replace(clamp_min((sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"1.0\"}[$__range])) - sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"0.5\"}[$__range]))), 0), \"bucket\", \"0.50 - 1.00 s\", \"__name__\", \".*\") or label_replace(clamp_min((sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"2.0\"}[$__range])) - sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"1.0\"}[$__range]))), 0), \"bucket\", \"1.00 - 2.00 s\", \"__name__\", \".*\") or label_replace(clamp_min((sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"5.0\"}[$__range])) - sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"2.0\"}[$__range]))), 0), \"bucket\", \"2.00 - 5.00 s\", \"__name__\", \".*\") or label_replace(clamp_min((sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"+Inf\"}[$__range])) - sum(increase(demo_periodic_duration_seconds_bucket{job=\"histogram-sender\",le=\"5.0\"}[$__range]))), 0), \"bucket\", \"5.00+ s\", \"__name__\", \".*\")",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "editorMode": "code"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "bucket": 0,
+              "Value": 1
+            },
+            "renameByName": {
+              "Value": "Observations"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "bucket",
+                "desc": false
+              }
+            ]
+          }
+        }
+      ],
+      "options": {
+        "orientation": "vertical",
+        "xField": "bucket",
+        "showValue": "always",
+        "stacking": "none",
+        "groupWidth": 0.9,
+        "barWidth": 0.85,
+        "barRadius": 0,
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0,
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "axisPlacement": "left",
+            "axisLabel": "Estimated observations",
+            "fillOpacity": 85,
+            "lineWidth": 0,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": []
+      }
+    }
+  ]
+}
