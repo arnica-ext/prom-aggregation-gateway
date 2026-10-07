@@ -16,6 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 )
 
 const DefaultMetricTTL = 30 * time.Minute
@@ -226,6 +227,40 @@ func (a *Aggregate) HandleRender(c *gin.Context) {
 	}
 
 	a.encodeAllMetrics(writer, contentType)
+}
+
+// HandleReset removes the selected metric families, including all label sets.
+func (a *Aggregate) HandleReset(c *gin.Context) {
+	c.Header("Cache-Control", "no-store")
+	values := c.QueryArray("metrics")
+	if len(values) == 0 {
+		http.Error(c.Writer, "metrics query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	names := make(map[string]struct{})
+	for _, value := range values {
+		for _, name := range strings.Split(value, ",") {
+			name = strings.TrimSpace(name)
+			if !model.IsValidMetricName(model.LabelValue(name)) {
+				http.Error(c.Writer, "metrics must contain non-empty, valid metric family names", http.StatusBadRequest)
+				return
+			}
+			names[name] = struct{}{}
+		}
+	}
+
+	// Validate the entire selection before modifying any families. Use the same
+	// lock as inserts, scrapes, and expiry cleanup.
+	a.familiesLock.Lock()
+	for name := range names {
+		delete(a.families, name)
+		MetricCountByFamily.DeleteLabelValues(name)
+	}
+	TotalFamiliesGauge.Set(float64(len(a.families)))
+	a.familiesLock.Unlock()
+
+	c.Status(http.StatusNoContent)
 }
 
 func (a *Aggregate) encodeAllMetrics(writer io.Writer, contentType expfmt.Format) {

@@ -40,6 +40,19 @@ push_to_gateway('localhost', job='my_job_name', registry=registry)
 
 Then have your Prometheus scrape metrics at `/metrics`.
 
+### Resetting metrics
+
+Send a GET request to `/reset` with a comma-separated `metrics` query parameter:
+
+```bash
+curl 'http://localhost/reset?metrics=http_requests_total,http_errors_total'
+```
+
+You can also repeat the parameter: `/reset?metrics=http_requests_total&metrics=http_errors_total`.
+Reset removes the named metric families and all their label sets from the gateway. They disappear from `/metrics` until pushed again, at which point aggregation starts with fresh values. Other metrics are unaffected; historical samples already scraped by Prometheus are unchanged. For histograms and summaries, use the base family name, without `_bucket`, `_sum`, or `_count`.
+
+Success returns `204 No Content`; unknown names are ignored. Missing, empty, or invalid metric names return `400 Bad Request` without resetting anything. If basic authentication is configured, use the same credentials as for pushing metrics (for example, `curl -u user:password 'http://localhost/reset?metrics=http_requests_total'`).
+
 ### Running the service
 
 

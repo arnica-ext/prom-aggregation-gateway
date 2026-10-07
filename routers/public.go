@@ -1,12 +1,12 @@
 package routers
 
 import (
+	"github.com/arnica-ext/prom-aggregation-gateway/metrics"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	promMetrics "github.com/slok/go-http-metrics/metrics/prometheus"
 	"github.com/slok/go-http-metrics/middleware"
 	mGin "github.com/slok/go-http-metrics/middleware/gin"
-	"github.com/arnica-ext/prom-aggregation-gateway/metrics"
 )
 
 type ApiRouterConfig struct {
@@ -56,6 +56,13 @@ func setupAPIRouter(cfg ApiRouterConfig, agg *metrics.Aggregate, promConfig prom
 	r.POST("/metrics/*labels", postHandlers...)
 	r.PUT("/metrics", postHandlers...)
 	r.PUT("/metrics/*labels", postHandlers...)
+
+	resetHandlers := []gin.HandlerFunc{
+		mGin.Handler("resetMetrics", metricsMiddleware),
+	}
+	resetHandlers = append(resetHandlers, neededHandlers...)
+	resetHandlers = append(resetHandlers, agg.HandleReset)
+	r.GET("/reset", resetHandlers...)
 
 	return r
 }
